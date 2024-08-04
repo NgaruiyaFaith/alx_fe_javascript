@@ -6,7 +6,6 @@ function loadQuotes() {
     const storedQuotes = localStorage.getItem('quotes');
     if (storedQuotes) {
         quotes = JSON.parse(storedQuotes);
-        updateCategories();
     } else {
         // Initial quotes if local storage is empty
         quotes = [
@@ -15,8 +14,8 @@ function loadQuotes() {
             { text: "The only way to do great work is to love what you do.", category: "Career" }
         ];
         saveQuotes();
-        updateCategories();
     }
+    populateCategories();
 }
 
 // Save quotes to local storage
@@ -24,8 +23,8 @@ function saveQuotes() {
     localStorage.setItem('quotes', JSON.stringify(quotes));
 }
 
-// Update categories set and dropdown
-function updateCategories() {
+// Function to populate categories
+function populateCategories() {
     categories = new Set(['All Categories', ...quotes.map(quote => quote.category)]);
     const categoryFilter = document.getElementById('categoryFilter');
     categoryFilter.innerHTML = '';
@@ -36,15 +35,15 @@ function updateCategories() {
         categoryFilter.appendChild(option);
     });
     
-    // Set the last selected category
+    // Restore the last selected category
     const lastCategory = localStorage.getItem('lastCategory') || 'All Categories';
     categoryFilter.value = lastCategory;
 }
 
-// Function to display quotes based on selected category
+// Function to filter and display quotes based on selected category
 function filterQuotes() {
     const category = document.getElementById('categoryFilter').value;
-    localStorage.setItem('lastCategory', category);
+    localStorage.setItem('lastCategory', category); // Save selected category
     
     const filteredQuotes = category === 'All Categories' 
         ? quotes 
@@ -98,7 +97,7 @@ function addQuote() {
     if (newQuoteText && newQuoteCategory) {
         quotes.push({ text: newQuoteText, category: newQuoteCategory });
         saveQuotes();
-        updateCategories();
+        populateCategories();
         alert("Quote added successfully!");
         document.getElementById('newQuoteText').value = '';
         document.getElementById('newQuoteCategory').value = '';
@@ -130,7 +129,7 @@ function importFromJsonFile(event) {
             const importedQuotes = JSON.parse(event.target.result);
             quotes.push(...importedQuotes);
             saveQuotes();
-            updateCategories();
+            populateCategories();
             alert('Quotes imported successfully!');
             filterQuotes();
         } catch (error) {
