@@ -16,6 +16,7 @@ function loadQuotes() {
         saveQuotes();
     }
     populateCategories();
+    restoreLastSelectedCategory();
 }
 
 // Save quotes to local storage
@@ -34,20 +35,25 @@ function populateCategories() {
         option.textContent = category;
         categoryFilter.appendChild(option);
     });
-    
-    // Restore the last selected category
+}
+
+// Function to restore the last selected category
+function restoreLastSelectedCategory() {
     const lastCategory = localStorage.getItem('lastCategory') || 'All Categories';
-    categoryFilter.value = lastCategory;
+    document.getElementById('categoryFilter').value = lastCategory;
+    filterQuotes(lastCategory);
 }
 
 // Function to filter and display quotes based on selected category
-function filterQuotes() {
-    const category = document.getElementById('categoryFilter').value;
-    localStorage.setItem('lastCategory', category); // Save selected category
+function filterQuotes(category = null) {
+    const selectedCategory = category || document.getElementById('categoryFilter').value;
     
-    const filteredQuotes = category === 'All Categories' 
+    // Save selected category to local storage
+    localStorage.setItem('lastCategory', selectedCategory);
+    
+    const filteredQuotes = selectedCategory === 'All Categories' 
         ? quotes 
-        : quotes.filter(quote => quote.category === category);
+        : quotes.filter(quote => quote.category === selectedCategory);
     
     displayQuotes(filteredQuotes);
 }
@@ -143,9 +149,8 @@ function importFromJsonFile(event) {
 document.getElementById('newQuote').addEventListener('click', showRandomQuote);
 document.getElementById('exportJson').addEventListener('click', exportToJson);
 document.getElementById('importFile').addEventListener('change', importFromJsonFile);
-document.getElementById('categoryFilter').addEventListener('change', filterQuotes);
+document.getElementById('categoryFilter').addEventListener('change', () => filterQuotes());
 
 // Initial setup
 loadQuotes();
 createAddQuoteForm();
-filterQuotes();
