@@ -6,6 +6,9 @@ const API_URL = 'https://jsonplaceholder.typicode.com/posts';
 async function fetchQuotesFromServer() {
     try {
         const response = await fetch(API_URL);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const serverQuotes = await response.json();
         return serverQuotes.slice(0, 5).map(post => ({
             id: post.id,
@@ -33,6 +36,9 @@ async function postQuoteToServer(quote) {
                 'Content-type': 'application/json; charset=UTF-8',
             },
         });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         notifyUser("Quote successfully posted to server.");
         return { ...quote, id: data.id };
@@ -48,7 +54,7 @@ async function syncQuotes() {
     console.log("Syncing quotes with server...");
     const serverQuotes = await fetchQuotesFromServer();
     const mergedQuotes = mergeQuotes(quotes, serverQuotes);
-    
+
     if (JSON.stringify(mergedQuotes) !== JSON.stringify(quotes)) {
         quotes = mergedQuotes;
         saveQuotes();
@@ -65,7 +71,7 @@ function mergeQuotes(localQuotes, serverQuotes) {
     const mergedQuotes = [...localQuotes];
     let updatedCount = 0;
     let newCount = 0;
-    
+
     serverQuotes.forEach(serverQuote => {
         const existingQuoteIndex = mergedQuotes.findIndex(q => q.id === serverQuote.id);
         if (existingQuoteIndex >= 0) {
@@ -130,7 +136,52 @@ async function addQuote() {
     }
 }
 
-// Other functions (loadQuotes, populateCategories, restoreLastSelectedCategory, filterQuotes, displayQuotes) remain the same
+// Function to load quotes from local storage
+function loadQuotes() {
+    const storedQuotes = localStorage.getItem('quotes');
+    if (storedQuotes) {
+        quotes = JSON.parse(storedQuotes);
+        populateCategories();
+        filterQuotes();
+    }
+}
+
+// Function to populate categories
+function populateCategories() {
+    categories.clear();
+    categories.add('All Categories');
+    quotes.forEach(quote => {
+        categories.add(quote.category);
+    });
+    const categoryFilter = document.getElementById('categoryFilter');
+    categoryFilter.innerHTML = '';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categoryFilter.appendChild(option);
+    });
+}
+
+// Function to filter quotes
+function filterQuotes() {
+    const categoryFilter = document.getElementById('categoryFilter').value;
+    const filteredQuotes = categoryFilter === 'All Categories'
+        ? quotes
+        : quotes.filter(quote => quote.category === categoryFilter);
+    displayQuotes(filteredQuotes);
+}
+
+// Function to display quotes
+function displayQuotes(quotesToDisplay) {
+    const quoteDisplay = document.getElementById('quoteDisplay');
+    quoteDisplay.innerHTML = '';
+    quotesToDisplay.forEach(quote => {
+        const quoteElement = document.createElement('div');
+        quoteElement.textContent = `${quote.text} - ${quote.category}`;
+        quoteDisplay.appendChild(quoteElement);
+    });
+}
 
 // Event listeners
 document.getElementById('newQuote').addEventListener('click', () => {
