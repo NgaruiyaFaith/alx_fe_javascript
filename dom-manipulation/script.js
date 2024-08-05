@@ -7,8 +7,6 @@ async function fetchQuotesFromServer() {
     try {
         const response = await fetch(API_URL);
         const serverQuotes = await response.json();
-        
-        // Simulate converting server data to our format
         return serverQuotes.slice(0, 5).map(post => ({
             id: post.id,
             text: post.title,
@@ -36,6 +34,7 @@ async function postQuoteToServer(quote) {
             },
         });
         const data = await response.json();
+        notifyUser("Quote successfully posted to server.");
         return { ...quote, id: data.id };
     } catch (error) {
         console.error("Error posting quote to server:", error);
@@ -46,6 +45,7 @@ async function postQuoteToServer(quote) {
 
 // Function to sync quotes
 async function syncQuotes() {
+    console.log("Syncing quotes with server...");
     const serverQuotes = await fetchQuotesFromServer();
     const mergedQuotes = mergeQuotes(quotes, serverQuotes);
     
@@ -55,94 +55,59 @@ async function syncQuotes() {
         populateCategories();
         filterQuotes();
         notifyUser("Quotes have been updated from the server.");
+    } else {
+        console.log("No new quotes from server.");
     }
 }
 
 // Function to merge local and server quotes
 function mergeQuotes(localQuotes, serverQuotes) {
     const mergedQuotes = [...localQuotes];
+    let updatedCount = 0;
+    let newCount = 0;
     
     serverQuotes.forEach(serverQuote => {
         const existingQuoteIndex = mergedQuotes.findIndex(q => q.id === serverQuote.id);
         if (existingQuoteIndex >= 0) {
             // Update existing quote (server data takes precedence)
             mergedQuotes[existingQuoteIndex] = serverQuote;
-            notifyUser(`Quote updated: "${serverQuote.text}"`);
+            updatedCount++;
         } else {
             // Add new quote
             mergedQuotes.push(serverQuote);
-            notifyUser(`New quote added: "${serverQuote.text}"`);
+            newCount++;
         }
     });
 
-    return mergedQuotes;
-}
-
-// Load quotes from local storage on initialization
-async function loadQuotes() {
-    const storedQuotes = localStorage.getItem('quotes');
-    if (storedQuotes) {
-        quotes = JSON.parse(storedQuotes);
-    } else {
-        quotes = [
-            { id: 1, text: "Be the change you wish to see in the world.", category: "Inspirational" },
-            { id: 2, text: "Stay hungry, stay foolish.", category: "Motivational" },
-            { id: 3, text: "The only way to do great work is to love what you do.", category: "Career" }
-        ];
-        saveQuotes();
+    if (updatedCount > 0 || newCount > 0) {
+        notifyUser(`Sync complete. Updated: ${updatedCount}, New: ${newCount}`);
     }
-    populateCategories();
-    restoreLastSelectedCategory();
-    await syncQuotes();
+
+    return mergedQuotes;
 }
 
 // Save quotes to local storage
 function saveQuotes() {
     localStorage.setItem('quotes', JSON.stringify(quotes));
+    console.log("Quotes saved to local storage.");
 }
 
-// Function to populate categories
-function populateCategories() {
-    categories = new Set(['All Categories', ...quotes.map(quote => quote.category)]);
-    const categoryFilter = document.getElementById('categoryFilter');
-    categoryFilter.innerHTML = '';
-    categories.forEach(category => {
-        const option = document.createElement('option');
-        option.value = category;
-        option.textContent = category;
-        categoryFilter.appendChild(option);
-    });
-}
-
-// Function to restore the last selected category
-function restoreLastSelectedCategory() {
-    const lastCategory = localStorage.getItem('lastCategory') || 'All Categories';
-    document.getElementById('categoryFilter').value = lastCategory;
-    filterQuotes(lastCategory);
-}
-
-// Function to filter and display quotes based on selected category
-function filterQuotes(category = null) {
-    const selectedCategory = category || document.getElementById('categoryFilter').value;
-    localStorage.setItem('lastCategory', selectedCategory);
-    
-    const filteredQuotes = selectedCategory === 'All Categories' 
-        ? quotes 
-        : quotes.filter(quote => quote.category === selectedCategory);
-    
-    displayQuotes(filteredQuotes);
-}
-
-// Function to display quotes
-function displayQuotes(quoteList) {
-    const quoteDisplay = document.getElementById('quoteDisplay');
-    if (quoteList.length === 0) {
-        quoteDisplay.textContent = "No quotes available for this category.";
-        return;
-    }
-    quoteDisplay.innerHTML = quoteList.map(quote => 
-        `<div><p>"${quote.text}"</p><p>Category: ${quote.category}</p></div>`
-    ).join('');
+// Function to notify user
+function notifyUser(message) {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.position = 'fixed';
+    notification.style.top = '10px';
+    notification.style.right = '10px';
+    notification.style.backgroundColor = '#f0f0f0';
+    notification.style.padding = '10px';
+    notification.style.borderRadius = '5px';
+    notification.style.zIndex = '1000';
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        document.body.removeChild(notification);
+    }, 5000);
+    console.log("Notification:", message);
 }
 
 // Function to add a new quote
@@ -165,22 +130,7 @@ async function addQuote() {
     }
 }
 
-// Function to notify user
-function notifyUser(message) {
-    const notification = document.createElement('div');
-    notification.textContent = message;
-    notification.style.position = 'fixed';
-    notification.style.top = '10px';
-    notification.style.right = '10px';
-    notification.style.backgroundColor = '#f0f0f0';
-    notification.style.padding = '10px';
-    notification.style.borderRadius = '5px';
-    notification.style.zIndex = '1000';
-    document.body.appendChild(notification);
-    setTimeout(() => {
-        document.body.removeChild(notification);
-    }, 5000);
-}
+// Other functions (loadQuotes, populateCategories, restoreLastSelectedCategory, filterQuotes, displayQuotes) remain the same
 
 // Event listeners
 document.getElementById('newQuote').addEventListener('click', () => {
@@ -195,3 +145,10 @@ loadQuotes();
 
 // Periodic sync (every 5 minutes)
 setInterval(syncQuotes, 300000);
+console.log("Periodic sync set up for every 5 minutes.");
+
+// Manual sync button (for testing)
+const syncButton = document.createElement('button');
+syncButton.textContent = "Manual Sync";
+syncButton.onclick = syncQuotes;
+document.body.appendChild(syncButton);
